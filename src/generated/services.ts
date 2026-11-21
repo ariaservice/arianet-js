@@ -1766,7 +1766,7 @@ export class RegionalVPSService extends Service {
   }
 
   /**
-   * Set the root password. Without one it is generated and returned once in this answer
+   * Set the root password. Without one it is generated and returned once in this answer. An image of kind routeros or other has none (422 unsupported_image: use the console)
    *
    * `POST /servers/{id}/reset-password`
    */
@@ -2565,6 +2565,15 @@ export class BaremetalService extends Service {
   }
 
   /**
+   * Your servers an additional IP (bought in the IP product) can go to, with each datacenter's registry, and why not
+   *
+   * `GET /provider-ips/servers`
+   */
+  listProviderIpServers(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/baremetal/v1/provider-ips/servers", undefined, undefined, options, false);
+  }
+
+  /**
    * Price a configuration (nothing held)
    *
    * `POST /quote`
@@ -2830,6 +2839,24 @@ export class SMSService extends Service {
   protected readonly prefix = "/sms/v1";
 
   /**
+   * The activation request and whether one is needed
+   *
+   * `GET /application`
+   */
+  getApplication(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/sms/v1/application", undefined, undefined, options, false);
+  }
+
+  /**
+   * Submit the activation request (reviewed before the account can send)
+   *
+   * `POST /application`
+   */
+  createApplication(body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/sms/v1/application", undefined, body, options, false);
+  }
+
+  /**
    * List batches
    *
    * `GET /batches`
@@ -2911,7 +2938,7 @@ export class SMSService extends Service {
   }
 
   /**
-   * Send a message to one or more recipients (or schedule it)
+   * Send an approved template to up to 100 recipients (only for accounts staff opened for direct sending; otherwise 403 direct_send_disabled - use /verify/lookup)
    *
    * `POST /messages`
    */
@@ -3007,6 +3034,15 @@ export class SMSService extends Service {
    */
   deleteTemplate(template: string, options?: RequestOptions): Promise<any> {
     return this.send("DELETE", "/sms/v1/templates/" + pathSegment(template), undefined, undefined, options, false);
+  }
+
+  /**
+   * Send an approved template to one recipient (verification codes, notices)
+   *
+   * `POST /verify/lookup`
+   */
+  createVerifyLookup(body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/sms/v1/verify/lookup", undefined, body, options, false);
   }
 
   /**
