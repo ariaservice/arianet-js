@@ -1664,6 +1664,15 @@ export class RegionalVPSService extends Service {
   }
 
   /**
+   * Every visible backup and snapshot of your servers, deleted servers' retained ones included
+   *
+   * `GET /backups`
+   */
+  listAccountBackups(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/vps/v1/backups", undefined, undefined, options, false);
+  }
+
+  /**
    * Datacenters of this region, with what their hosts can do
    *
    * `GET /datacenters`
@@ -1748,6 +1757,60 @@ export class RegionalVPSService extends Service {
   }
 
   /**
+   * The server's backups and snapshots, the add-on's state and prices
+   *
+   * `GET /servers/{id}/backups`
+   */
+  getServerBackups(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/vps/v1/servers/" + pathSegment(id) + "/backups", undefined, undefined, options, false);
+  }
+
+  /**
+   * Take a manual backup now. It uses one of the 7 slots shared with the nightly backups
+   *
+   * `POST /servers/{id}/backups`
+   */
+  createServerBackup(id: number | string, body?: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/backups", undefined, body, options, false);
+  }
+
+  /**
+   * Turn the backup add-on off: billing stops now and the backups are deleted after 48 hours. Snapshots stay
+   *
+   * `POST /servers/{id}/backups/disable`
+   */
+  disableServerBackups(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/backups/disable", undefined, undefined, options, false);
+  }
+
+  /**
+   * Turn the backup add-on on: a nightly backup, 7 slots, billed as a percent of the plan
+   *
+   * `POST /servers/{id}/backups/enable`
+   */
+  enableServerBackups(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/backups/enable", undefined, undefined, options, false);
+  }
+
+  /**
+   * Delete a backup or snapshot, also of a deleted server
+   *
+   * `DELETE /servers/{id}/backups/{backup}`
+   */
+  deleteServerBackup(id: number | string, backup: string, options?: RequestOptions): Promise<any> {
+    return this.send("DELETE", "/vps/v1/servers/" + pathSegment(id) + "/backups/" + pathSegment(backup), undefined, undefined, options, false);
+  }
+
+  /**
+   * Restore a backup or snapshot onto the server: its disks are replaced and it restarts; everything after the backup is lost
+   *
+   * `POST /servers/{id}/backups/{backup}/restore`
+   */
+  restoreServerBackup(id: number | string, backup: string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/backups/" + pathSegment(backup) + "/restore", undefined, undefined, options, false);
+  }
+
+  /**
    * A one-time browser console URL (VNC). Open it at once: it expires in expires_in seconds and works once; never store it
    *
    * `POST /servers/{id}/console`
@@ -1766,7 +1829,7 @@ export class RegionalVPSService extends Service {
   }
 
   /**
-   * Set the root password. Without one it is generated and returned once in this answer
+   * Set the root password. Without one it is generated and returned once in this answer. An image of kind routeros or other has none (422 unsupported_image: use the console)
    *
    * `POST /servers/{id}/reset-password`
    */
@@ -1781,6 +1844,15 @@ export class RegionalVPSService extends Service {
    */
   resizeServer(id: number | string, body: unknown, options?: RequestOptions): Promise<any> {
     return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/resize", undefined, body, options, false);
+  }
+
+  /**
+   * Take a snapshot, kept until deleted and billed per GB
+   *
+   * `POST /servers/{id}/snapshots`
+   */
+  createServerSnapshot(id: number | string, body?: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/vps/v1/servers/" + pathSegment(id) + "/snapshots", undefined, body, options, false);
   }
 
   /**
@@ -1812,6 +1884,12 @@ export interface HostingListAlertsQuery {
   limit?: number;
 }
 
+/** Query parameters of `HostingService.getBackups`. */
+export interface HostingGetBackupsQuery {
+  /** Read the server again instead of the last answer (kept 30 s). */
+  refresh?: string;
+}
+
 /** Query parameters of `HostingService.getCloudLinux`. */
 export interface HostingGetCloudLinuxQuery {
   /** Read the server again instead of answering from the snapshot (waits up to 30 s). */
@@ -1833,6 +1911,12 @@ export interface HostingGetRedisQuery {
 /** Query parameters of `HostingService.getRedisUsage`. */
 export interface HostingGetRedisUsageQuery {
   period?: string;
+}
+
+/** Query parameters of `HostingService.getResellerAccountBackups`. */
+export interface HostingGetResellerAccountBackupsQuery {
+  /** Read the server again instead of the last answer (kept 30 s). */
+  refresh?: string;
 }
 
 /** Query parameters of `HostingService.getResourceUsage`. */
@@ -1949,6 +2033,51 @@ export class HostingService extends Service {
    */
   listAlerts(id: number | string, query?: HostingListAlertsQuery, options?: RequestOptions): Promise<any> {
     return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/alerts", query as Record<string, unknown> | undefined, undefined, options, false);
+  }
+
+  /**
+   * The account's backups: whether its server keeps them, the add-on, its price, the restore points and downloads
+   *
+   * `GET /accounts/{id}/backups`
+   */
+  getBackups(id: number | string, query?: HostingGetBackupsQuery, options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/backups", query as Record<string, unknown> | undefined, undefined, options, false);
+  }
+
+  /**
+   * Take a backup now, kept as one of the account's own (the oldest of 3 rotates out)
+   *
+   * `POST /accounts/{id}/backups`
+   */
+  takeBackup(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/backups", undefined, undefined, options, false);
+  }
+
+  /**
+   * Turn the backup add-on on or off. On is charged for the rest of the term (nothing when this term is already paid for it) and renews with the account; off refunds nothing and hides the restore points at once
+   *
+   * `PUT /accounts/{id}/backups`
+   */
+  setBackups(id: number | string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("PUT", "/hosting/v1/accounts/" + pathSegment(id) + "/backups", undefined, body, options, false);
+  }
+
+  /**
+   * Build a downloadable archive (a cPanel backup) of a restore point in the account's home; once the action succeeds it is in downloads (its result names the file), fetched with the File Manager login link, and deleted after 48 hours
+   *
+   * `POST /accounts/{id}/backups/{point}/download`
+   */
+  downloadBackup(id: number | string, point: string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/backups/" + pathSegment(point) + "/download", undefined, undefined, options, false);
+  }
+
+  /**
+   * Restore a restore point over the account: everything (full), only the files and mail (files) or only the databases. The current data is overwritten; the plan and main domain stay as they are
+   *
+   * `POST /accounts/{id}/backups/{point}/restore`
+   */
+  restoreBackup(id: number | string, point: string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/backups/" + pathSegment(point) + "/restore", undefined, body, options, false);
   }
 
   /**
@@ -2114,6 +2243,42 @@ export class HostingService extends Service {
   }
 
   /**
+   * IPs the server blocked for the account's sites, why, and its allowlist
+   *
+   * `GET /accounts/{id}/firewall`
+   */
+  getFirewall(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/firewall", undefined, undefined, options, false);
+  }
+
+  /**
+   * Allow an IP: never blocked for the account's sites
+   *
+   * `POST /accounts/{id}/firewall/allowed`
+   */
+  allowIp(id: number | string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/firewall/allowed", undefined, body, options, false);
+  }
+
+  /**
+   * Take an IP off the account's allowlist
+   *
+   * `DELETE /accounts/{id}/firewall/allowed/{ip}`
+   */
+  disallowIp(id: number | string, ip: string, options?: RequestOptions): Promise<any> {
+    return this.send("DELETE", "/hosting/v1/accounts/" + pathSegment(id) + "/firewall/allowed/" + pathSegment(ip), undefined, undefined, options, false);
+  }
+
+  /**
+   * Lift a block of an IP raised for the account's sites
+   *
+   * `POST /accounts/{id}/firewall/unblock`
+   */
+  unblockIp(id: number | string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/firewall/unblock", undefined, body, options, false);
+  }
+
+  /**
    * A one-time login link into the control panel
    *
    * `POST /accounts/{id}/login`
@@ -2258,6 +2423,42 @@ export class HostingService extends Service {
   }
 
   /**
+   * One of the reseller's customer accounts' backups, in the shape of an account's: its restore points (only those taken while the reseller owned it), manual backups, the running action and downloads. price and due_now are null (the add-on is the reseller account's). Also needs hosting:view
+   *
+   * `GET /accounts/{id}/reseller/accounts/{username}/backups`
+   */
+  getResellerAccountBackups(id: number | string, username: string, query?: HostingGetResellerAccountBackupsQuery, options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/accounts/" + pathSegment(username) + "/backups", query as Record<string, unknown> | undefined, undefined, options, false);
+  }
+
+  /**
+   * Take a backup of one of the reseller's customer accounts now, kept as one of its own (the oldest of 3 rotates out). Also needs hosting:view and hosting:manage
+   *
+   * `POST /accounts/{id}/reseller/accounts/{username}/backups`
+   */
+  resellerTakeAccountBackup(id: number | string, username: string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/accounts/" + pathSegment(username) + "/backups", undefined, undefined, options, false);
+  }
+
+  /**
+   * Build a downloadable archive of a restore point in the customer account's home; fetch it with the customer account's File Manager login (POST .../login), deleted after 48 hours. Also needs hosting:view and hosting:manage
+   *
+   * `POST /accounts/{id}/reseller/accounts/{username}/backups/{point}/download`
+   */
+  resellerDownloadAccountBackup(id: number | string, username: string, point: string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/accounts/" + pathSegment(username) + "/backups/" + pathSegment(point) + "/download", undefined, undefined, options, false);
+  }
+
+  /**
+   * Restore one of the reseller's customer accounts from a restore point: everything (full), only the files and mail (files) or only the databases; its package and main domain stay. Also needs hosting:view and hosting:manage
+   *
+   * `POST /accounts/{id}/reseller/accounts/{username}/backups/{point}/restore`
+   */
+  resellerRestoreAccountBackup(id: number | string, username: string, point: string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/accounts/" + pathSegment(username) + "/backups/" + pathSegment(point) + "/restore", undefined, body, options, false);
+  }
+
+  /**
    * Change the main domain of one of the reseller's customer accounts, at once. Its first change is free, each later one is charged to the reseller's account. Also needs hosting:view
    *
    * `POST /accounts/{id}/reseller/accounts/{username}/domain`
@@ -2327,6 +2528,24 @@ export class HostingService extends Service {
    */
   listResellerPackages(id: number | string, options?: RequestOptions): Promise<any> {
     return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/packages", undefined, undefined, options, false);
+  }
+
+  /**
+   * The reseller's customer accounts deleted from its server whose backups are still held (30 days after their last backup): they can be created again. Also needs hosting:view
+   *
+   * `GET /accounts/{id}/reseller/retained`
+   */
+  listResellerRetained(id: number | string, options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/retained", undefined, undefined, options, false);
+  }
+
+  /**
+   * Create a deleted customer account again from its latest backup, under its old username and domain, owned by the reseller. No charge; it counts against the reseller's account limit. Also needs hosting:view and hosting:manage
+   *
+   * `POST /accounts/{id}/reseller/retained/{username}/restore`
+   */
+  resellerRestoreRetained(id: number | string, username: string, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/accounts/" + pathSegment(id) + "/reseller/retained/" + pathSegment(username) + "/restore", undefined, undefined, options, false);
   }
 
   /**
@@ -2454,6 +2673,27 @@ export class HostingService extends Service {
   listPlans(query?: HostingListPlansQuery, options?: RequestOptions): Promise<any> {
     return this.send("GET", "/hosting/v1/plans", query as Record<string, unknown> | undefined, undefined, options, false);
   }
+
+  /**
+   * Your terminated accounts whose backup is still held (about 30 days after the termination): they can be claimed back
+   *
+   * `GET /retained`
+   */
+  listRetained(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/hosting/v1/retained", undefined, undefined, options, false);
+  }
+
+  /**
+   * Claim a terminated account back: an order of a new term (the order's price, the restore itself is free) on the same server, created from its latest backup under its old domain. Answered like an order: follow the action. Its domain or username held again fails it and releases the payment hold
+   *
+   * `POST /retained/{id}/claim`
+   *
+   * Sent with an Idempotency-Key (generated when `options.idempotencyKey` is not
+   * given), so it is retried safely after a network error or a 5xx.
+   */
+  claimRetained(id: number | string, body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/hosting/v1/retained/" + pathSegment(id) + "/claim", undefined, body, options, true);
+  }
 }
 
 /** Query parameters of `BaremetalService.listPlans`. */
@@ -2562,6 +2802,15 @@ export class BaremetalService extends Service {
    */
   getPlanOptions(catalog: string, plan: string, query?: BaremetalGetPlanOptionsQuery, options?: RequestOptions): Promise<any> {
     return this.send("GET", "/baremetal/v1/plans/" + pathSegment(catalog) + "/" + pathSegment(plan) + "/options", query as Record<string, unknown> | undefined, undefined, options, false);
+  }
+
+  /**
+   * Your servers an additional IP (bought in the IP product) can go to, with each datacenter's registry, and why not
+   *
+   * `GET /provider-ips/servers`
+   */
+  listProviderIpServers(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/baremetal/v1/provider-ips/servers", undefined, undefined, options, false);
   }
 
   /**
@@ -2830,6 +3079,24 @@ export class SMSService extends Service {
   protected readonly prefix = "/sms/v1";
 
   /**
+   * The activation request and whether one is needed
+   *
+   * `GET /application`
+   */
+  getApplication(options?: RequestOptions): Promise<any> {
+    return this.send("GET", "/sms/v1/application", undefined, undefined, options, false);
+  }
+
+  /**
+   * Submit the activation request (reviewed before the account can send)
+   *
+   * `POST /application`
+   */
+  createApplication(body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/sms/v1/application", undefined, body, options, false);
+  }
+
+  /**
    * List batches
    *
    * `GET /batches`
@@ -2911,7 +3178,7 @@ export class SMSService extends Service {
   }
 
   /**
-   * Send a message to one or more recipients (or schedule it)
+   * Send an approved template to up to 100 recipients (only for accounts staff opened for direct sending; otherwise 403 direct_send_disabled - use /verify/lookup)
    *
    * `POST /messages`
    */
@@ -3007,6 +3274,15 @@ export class SMSService extends Service {
    */
   deleteTemplate(template: string, options?: RequestOptions): Promise<any> {
     return this.send("DELETE", "/sms/v1/templates/" + pathSegment(template), undefined, undefined, options, false);
+  }
+
+  /**
+   * Send an approved template to one recipient (verification codes, notices)
+   *
+   * `POST /verify/lookup`
+   */
+  createVerifyLookup(body: unknown, options?: RequestOptions): Promise<any> {
+    return this.send("POST", "/sms/v1/verify/lookup", undefined, body, options, false);
   }
 
   /**
